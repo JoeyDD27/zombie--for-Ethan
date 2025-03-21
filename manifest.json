@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Zombie!",
+  "version": "0.1",
+  "description": "Spawn zombies that crash into each other!",
+  "action": {
+    "default_icon": "zombie.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "activ  `eTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ]
+}
