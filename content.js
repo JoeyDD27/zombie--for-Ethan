@@ -34,17 +34,17 @@ class Zombie {
     // Set properties based on type
     switch (type) {
       case 'archer':
-        this.hp = 100;
-        this.damage = 11;
-        this.speed = 3;
-        this.cooldown = 1000;
+        this.hp = 120;
+        this.damage = 30;
+        this.speed = 5;
+        this.cooldown = 700;
         this.range = 999999; // Effectively infinite range
         this.dodgeChance = 0.4;
         break;
       case 'fighter':
         this.hp = 150;
         this.damage = 20;
-        this.speed = 5;
+        this.speed = 3;
         this.cooldown = 700;
         this.range = 50;
         this.dodgeChance = 0.8;
