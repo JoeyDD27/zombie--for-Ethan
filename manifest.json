@@ -23,7 +23,7 @@
     "service_worker": "background.js"
   },
   "permissions": [
-    "activ  `eTab",
+    "activeTab",
     "scripting"
   ],
   "host_permissions": [
