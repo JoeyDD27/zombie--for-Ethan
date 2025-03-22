@@ -34,20 +34,18 @@ class Zombie {
     // Set properties based on type
     switch (type) {
       case 'archer':
-        this.hp = 120;
-        this.damage = 30;
-        this.speed = 5;
-        this.cooldown = 700;
+        this.hp = 100;
+        this.damage = 4;
+        this.speed = 3;
+        this.cooldown = 1000;
         this.range = 999999; // Effectively infinite range
-        this.dodgeChance = 0.4;
         break;
       case 'fighter':
         this.hp = 150;
         this.damage = 20;
-        this.speed = 3;
+        this.speed = 5;
         this.cooldown = 700;
         this.range = 50;
-        this.dodgeChance = 0.8;
         break;
       case 'tank':
         this.hp = 300;
@@ -55,7 +53,6 @@ class Zombie {
         this.speed = 2;
         this.cooldown = 1000;
         this.range = 50;
-        this.dodgeChance = 0.2;
         break;
     }
 
@@ -201,19 +198,6 @@ class Zombie {
     }
   }
 
-  dodge() {
-    // Create dodge animation effect
-    const dodgeEffect = document.createElement('div');
-    dodgeEffect.className = 'dodge-effect';
-    dodgeEffect.textContent = 'Dodge!';
-    dodgeEffect.style.left = this.x + 'px';
-    dodgeEffect.style.top = (this.y - 20) + 'px';
-    document.body.appendChild(dodgeEffect);
-
-    // Remove the effect after animation
-    setTimeout(() => dodgeEffect.remove(), 500);
-  }
-
   isInCorner() {
     const margin = 50;
     return (
@@ -326,6 +310,20 @@ class Zombie {
       }
     }, 1000);
   }
+
+  handleProjectileHit(projectile, zombie) {
+    zombie.lastAttacker = projectile.sourceZombie;
+    zombie.hp -= projectile.damage;
+    zombie.element.textContent = zombie.hp;
+
+    if (zombie.hp <= 0) {
+      if (zombie.isCrowned && projectile.sourceZombie) {
+        projectile.sourceZombie.crown();
+      }
+      zombie.element.remove();
+    }
+    return true;
+  }
 }
 
 let zombies = [];
@@ -356,25 +354,21 @@ function animate() {
 
     // Check for projectile hits
     for (let zombie of zombies) {
-      // Skip hit detection if the zombie is the one who shot the arrow
       if (zombie === p.sourceZombie) continue;
 
       const dx = zombie.x + (zombie.size / 2) - p.x;
       const dy = zombie.y + (zombie.size / 2) - p.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < zombie.size / 2) { // Use radius for hit detection
-        // Check if zombie dodges the arrow
-        if (Math.random() < zombie.dodgeChance) {
-          zombie.dodge();
-          p.element.remove();
-          return false;
-        }
-
-        // If no dodge, apply damage
+      if (distance < zombie.size / 2) {
+        zombie.lastAttacker = p.sourceZombie;
         zombie.hp -= p.damage;
         zombie.element.textContent = zombie.hp;
+
         if (zombie.hp <= 0) {
+          if (zombie.isCrowned && p.sourceZombie) {
+            p.sourceZombie.crown();
+          }
           zombie.element.remove();
         }
         p.element.remove();
@@ -383,8 +377,8 @@ function animate() {
     }
 
     // Remove projectiles that go off screen
-    if (p.x < -15 || p.x > window.innerWidth + 15 ||
-      p.y < -15 || p.y > window.innerHeight + 15) {
+    if (p.x < -10 || p.x > window.innerWidth + 10 ||
+      p.y < -10 || p.y > window.innerHeight + 10) {
       p.element.remove();
       return false;
     }
