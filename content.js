@@ -55,25 +55,25 @@ class Zombie {
     this.hpDisplay.className = 'hp-display';
     this.element.appendChild(this.hpDisplay);
 
-    // Set properties based on type
+    // Set propertis ebased on type
     switch (type) {
       case 'archer':
-        this.hp = 100;
-        this.damage = 5;
+        this.hp = 400;
+        this.damage = 20;
         this.speed = 5;
         this.cooldown = 500;
         this.range = 400;
         break;
       case 'fighter':
-        this.hp = 150;
-        this.damage = 10;
+        this.hp = 450;
+        this.damage = 40;
         this.speed = 3;
         this.cooldown = 1000;
         this.range = 50;
         break;
       case 'tank':
-        this.hp = 200;
-        this.damage = 5;
+        this.hp = 600;
+        this.damage = 30;
         this.speed = 2;
         this.cooldown = 1500;
         this.range = 50;
@@ -162,9 +162,10 @@ class Zombie {
         this.aoeDamage = 30;
         break;
       case 'tank':
-        this.hp += 1000;
-        this.damage += 90;
-        this.healAmount = 25;
+        this.hp += 500;
+        this.damage += 40;
+        this.healAmount = 20;
+        this.speed += 1;
         break;
     }
 
@@ -177,11 +178,14 @@ class Zombie {
     this.isCrowned = true;
     this.element.classList.add('crowned');
 
-    // Add crown emoji without clearing existing emojis
-    const crownEmoji = document.createElement('div');
-    crownEmoji.className = 'status-emoji crown';
-    crownEmoji.textContent = '👑';
-    this.emojiContainer.appendChild(crownEmoji);
+    // Only add crown emoji if not OP
+    if (!this.isOP) {
+      // Add crown emoji without clearing existing emojis
+      const crownEmoji = document.createElement('div');
+      crownEmoji.className = 'status-emoji crown';
+      crownEmoji.textContent = '👑';
+      this.emojiContainer.appendChild(crownEmoji);
+    }
 
     this.hp += 100;
     this.damage = Math.floor(this.damage * 1.2);
@@ -283,6 +287,10 @@ class Zombie {
       target.updateHpDisplay();
 
       if (target.hp <= 0) {
+        // Gain 20 HP on kill
+        this.hp += 20;
+        this.updateHpDisplay();
+
         if (target.isCrowned && this) {
           this.crown();
         }
@@ -396,19 +404,93 @@ class Zombie {
 let zombies = [];
 let projectiles = [];
 
+// Add a control panel with spawn buttons
+function createZombieControlPanel() {
+  // Remove any existing panel first
+  const existingPanel = document.querySelector('.zombie-control-panel');
+  if (existingPanel) existingPanel.remove();
+
+  const panel = document.createElement('div');
+  panel.className = 'zombie-control-panel';
+
+  const archerButton = document.createElement('button');
+  archerButton.className = 'spawn-button archer';
+  archerButton.textContent = 'Spawn Archer';
+  archerButton.addEventListener('click', () => spawnSpecificZombie('archer'));
+
+  const fighterButton = document.createElement('button');
+  fighterButton.className = 'spawn-button fighter';
+  fighterButton.textContent = 'Spawn Fighter';
+  fighterButton.addEventListener('click', () => spawnSpecificZombie('fighter'));
+
+  const tankButton = document.createElement('button');
+  tankButton.className = 'spawn-button tank';
+  tankButton.textContent = 'Spawn Tank';
+  tankButton.addEventListener('click', () => spawnSpecificZombie('tank'));
+
+  const clearButton = document.createElement('button');
+  clearButton.className = 'spawn-button clear';
+  clearButton.textContent = 'Clear All';
+  clearButton.addEventListener('click', clearAllZombies);
+
+  panel.appendChild(archerButton);
+  panel.appendChild(fighterButton);
+  panel.appendChild(tankButton);
+  panel.appendChild(clearButton);
+
+  document.body.appendChild(panel);
+}
+
+function spawnSpecificZombie(type) {
+  const zombie = new Zombie(type);
+  zombies = zombies.filter(z => z.element.isConnected);
+  zombies.push(zombie);
+  console.log(`${type} zombie spawned`);
+}
+
+function clearAllZombies() {
+  // Remove all zombies from the DOM
+  zombies.forEach(zombie => {
+    if (zombie.element && zombie.element.isConnected) {
+      zombie.element.remove();
+    }
+    if (zombie.menu && zombie.menu.isConnected) {
+      zombie.menu.remove();
+    }
+  });
+
+  // Clear projectiles too
+  projectiles.forEach(projectile => {
+    if (projectile.element && projectile.element.isConnected) {
+      projectile.element.remove();
+    }
+  });
+
+  // Reset arrays
+  zombies = [];
+  projectiles = [];
+
+  console.log("All zombies cleared");
+}
+
 // Message listener for spawning zombies
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Message received:", message); // Debug log
+  console.log("Message received:", message);
+
   if (message.action === "spawn_zombie") {
-    console.log("Spawning zombie..."); // Debug log
+    console.log("Spawning zombie...");
     const types = ['archer', 'fighter', 'tank'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     const zombie = new Zombie(randomType);
     zombies = zombies.filter(z => z.element.isConnected);
     zombies.push(zombie);
-    console.log("Zombie spawned:", randomType); // Debug log
+    console.log("Zombie spawned:", randomType);
+
+    // Show the control panel when extension is clicked
+    createZombieControlPanel();
   }
-  return true; // Important: indicates we will respond asynchronously
+
+  return true;
 });
 
 // Animation loop
@@ -434,6 +516,12 @@ function animate() {
         zombie.updateHpDisplay();
 
         if (zombie.hp <= 0) {
+          // Gain 20 HP on kill for the source zombie
+          if (p.sourceZombie && p.sourceZombie.element && p.sourceZombie.element.isConnected) {
+            p.sourceZombie.hp += 20;
+            p.sourceZombie.updateHpDisplay();
+          }
+
           if (zombie.isCrowned && p.sourceZombie) {
             p.sourceZombie.crown();
           }

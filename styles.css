@@ -252,3 +252,54 @@
   font-weight: bold;
   z-index: 1;
 }
+
+.zombie-control-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.spawn-button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+.spawn-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.spawn-button.archer {
+  background-color: #4CAF50;
+}
+
+.spawn-button.fighter {
+  background-color: #F44336;
+}
+
+.spawn-button.tank {
+  background-color: #2196F3;
+}
+
+.spawn-button.clear {
+  background-color: #9C27B0;
+  color: white;
+  font-weight: bold;
+}
+
+.spawn-button.clear:hover {
+  background-color: #7B1FA2;
+}
