@@ -12,6 +12,8 @@
   user-select: none;
   box-sizing: border-box;
   transition: all 0.3s ease;
+  overflow: visible;
+  z-index: 1;
 }
 
 .archer {
@@ -34,11 +36,12 @@
 
 .projectile {
   position: fixed;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
   background-color: #4CAF50;
   border-radius: 50%;
   pointer-events: none;
+  z-index: 100;
 }
 
 .dodge-effect {
@@ -142,4 +145,110 @@
     box-shadow: 0 0 40px 20px rgba(255, 215, 0, 0);
     transform: scale(1);
   }
+}
+
+.zombie-menu {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  padding: 10px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 1000;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+
+.zombie-menu.visible {
+  display: flex;
+}
+
+.menu-option {
+  padding: 8px 12px;
+  background: #333;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.menu-option:hover {
+  background: #444;
+}
+
+.menu-option.OP {
+  background: #ff4444;
+}
+
+.menu-option.OP:hover {
+  background: #ff6666;
+}
+
+.menu-option.crown {
+  background: #ffd700;
+  color: #000;
+}
+
+.menu-option.crown:hover {
+  background: #ffeb3b;
+}
+
+.emoji-container {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-emoji {
+  position: relative;
+  font-size: 24px;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.status-emoji.crown {
+  color: gold;
+  margin-bottom: -10px;
+  z-index: 3;
+}
+
+.status-emoji.OP {
+  color: #000;
+  font-size: 28px;
+  text-shadow: 0 0 8px #800080, 0 0 15px #DA70D6;
+  animation: blackHolePulse 2s infinite;
+}
+
+@keyframes blackHolePulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hp-display {
+  position: relative;
+  font-size: 14px;
+  color: white;
+  font-weight: bold;
+  z-index: 1;
 }

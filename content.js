@@ -5,6 +5,9 @@ class Projectile {
     this.sourceZombie = sourceZombie;
     this.element = document.createElement('div');
     this.element.className = 'projectile';
+    this.element.style.width = '20px';
+    this.element.style.height = '20px';
+    this.element.style.borderRadius = '50%';
     this.x = x;
     this.y = y;
     this.damage = damage;
@@ -30,107 +33,173 @@ class Projectile {
 class Zombie {
   constructor(type = 'fighter') {
     this.type = type;
+    this.element = document.createElement('div');
+    this.element.className = `zombie ${type}`;
+    this.size = 50;
+    this.isCrowned = false;
+    this.isOP = false;
+    this.lastAttackTime = 0;
+    this.lastAoeDamageTime = 0;
+    this.aoeDamageInterval = 1000;
+    this.lastHealTime = 0;
+    this.healInterval = 1000;
+    this.healAmount = 10;
+
+    // Create container for emojis
+    this.emojiContainer = document.createElement('div');
+    this.emojiContainer.className = 'emoji-container';
+    this.element.appendChild(this.emojiContainer);
+
+    // Create HP display element
+    this.hpDisplay = document.createElement('span');
+    this.hpDisplay.className = 'hp-display';
+    this.element.appendChild(this.hpDisplay);
 
     // Set properties based on type
     switch (type) {
       case 'archer':
         this.hp = 100;
-        this.damage = 4;
-        this.speed = 3;
-        this.cooldown = 1000;
-        this.range = 999999; // Effectively infinite range
+        this.damage = 5;
+        this.speed = 5;
+        this.cooldown = 500;
+        this.range = 400;
         break;
       case 'fighter':
         this.hp = 150;
-        this.damage = 20;
-        this.speed = 5;
-        this.cooldown = 700;
-        this.range = 50;
-        break;
-      case 'tank':
-        this.hp = 300;
-        this.damage = 15;
-        this.speed = 2;
+        this.damage = 10;
+        this.speed = 3;
         this.cooldown = 1000;
         this.range = 50;
         break;
+      case 'tank':
+        this.hp = 200;
+        this.damage = 5;
+        this.speed = 2;
+        this.cooldown = 1500;
+        this.range = 50;
+        break;
     }
 
-    this.element = document.createElement('div');
-    this.element.className = `zombie ${type}`;
-    this.element.textContent = this.hp;
+    // Set initial HP display
+    this.updateHpDisplay();
 
-    this.lastAttackTime = 0;
-    this.x = Math.random() * (window.innerWidth - 50);
-    this.y = Math.random() * (window.innerHeight - 50);
-    this.dx = 0;
-    this.dy = 0;
+    // Create menu
+    this.menu = document.createElement('div');
+    this.menu.className = 'zombie-menu';
 
-    // Add size property
-    this.size = 50; // Size in pixels
+    const opOption = document.createElement('div');
+    opOption.className = 'menu-option OP';
+    opOption.textContent = 'OP';
+    opOption.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.makeOP();
+    });
 
+    const crownOption = document.createElement('div');
+    crownOption.className = 'menu-option crown';
+    crownOption.textContent = 'Crown';
+    crownOption.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.crown();
+    });
+
+    this.menu.appendChild(opOption);
+    this.menu.appendChild(crownOption);
+    document.body.appendChild(this.menu);
+
+    // Add click listener for menu
+    this.element.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showMenu(e.clientX, e.clientY);
+    });
+
+    // Hide menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+      if (!this.menu.contains(e.target)) {
+        this.hideMenu();
+      }
+    });
+
+    this.x = Math.random() * (window.innerWidth - this.size);
+    this.y = Math.random() * (window.innerHeight - this.size);
     this.element.style.left = this.x + 'px';
     this.element.style.top = this.y + 'px';
     document.body.appendChild(this.element);
-
-    this.isCrowned = false;
-    this.maxHp = this.hp;
-    this.originalDamage = this.damage;
-    this.lastAttacker = null;
-    this.regenAmount = 10; // Flat regeneration amount
-
-    // Add click listener for crowning
-    this.element.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent event bubbling
-      this.crown();
-    });
   }
 
-  checkCollision(other) {
-    const dx = this.x - other.x;
-    const dy = this.y - other.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-
-    // Use the full size for collision detection
-    return distance < this.size;
+  showMenu(x, y) {
+    this.menu.style.left = x + 'px';
+    this.menu.style.top = y + 'px';
+    this.menu.classList.add('visible');
   }
 
-  findTarget() {
-    let nearestTarget = null;
-    let nearestDistance = Infinity;
+  hideMenu() {
+    this.menu.classList.remove('visible');
+  }
 
-    for (let other of zombies) {
-      if (other === this) continue;
+  makeOP() {
+    if (this.isOP) return;
+    this.isOP = true;
+    this.element.classList.add('OP');
 
-      const dx = other.x - this.x;
-      const dy = other.y - this.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    // Add OP emoji without clearing existing emojis
+    const opEmoji = document.createElement('div');
+    opEmoji.className = 'status-emoji OP';
+    opEmoji.textContent = '🕳️'; // Black hole emoji
+    this.emojiContainer.appendChild(opEmoji);
 
-      // 60% chance targeting logic
-      if (Math.random() < 0.6) {
-        if ((this.type === 'archer' && other.type === 'tank') ||
-          (this.type === 'fighter' && other.type === 'archer') ||
-          (this.type === 'tank' && other.type === 'fighter')) {
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            nearestTarget = other;
-          }
-        }
-      }
-
-      // If no preferred target found, target nearest
-      if (!nearestTarget && distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestTarget = other;
-      }
+    switch (this.type) {
+      case 'archer':
+        this.cooldown = 100;
+        this.healAmount = 15;
+        break;
+      case 'fighter':
+        this.speed = 12;
+        this.damage = 30;
+        this.healAmount = 30;
+        this.aoeDamageInterval = 500;
+        this.aoeRadius = 150;
+        this.aoeDamage = 30;
+        break;
+      case 'tank':
+        this.hp += 1000;
+        this.damage += 90;
+        this.healAmount = 25;
+        break;
     }
 
-    return nearestTarget;
+    this.updateHpDisplay();
+    this.hideMenu();
+  }
+
+  crown() {
+    if (this.isCrowned) return;
+    this.isCrowned = true;
+    this.element.classList.add('crowned');
+
+    // Add crown emoji without clearing existing emojis
+    const crownEmoji = document.createElement('div');
+    crownEmoji.className = 'status-emoji crown';
+    crownEmoji.textContent = '👑';
+    this.emojiContainer.appendChild(crownEmoji);
+
+    this.hp += 100;
+    this.damage = Math.floor(this.damage * 1.2);
+    this.healAmount = 15;
+    this.updateHpDisplay();
+    this.hideMenu();
   }
 
   move() {
     const target = this.findTarget();
     const now = Date.now();
+
+    // Add healing for crowned and OP zombies
+    if ((this.isCrowned || this.isOP) && now - this.lastHealTime >= this.healInterval) {
+      this.lastHealTime = now;
+      this.hp += this.healAmount;
+      this.updateHpDisplay();
+    }
 
     if (!target) return;
 
@@ -143,8 +212,12 @@ class Zombie {
       // Archer movement
       if (distance < 200) {
         // Run away if too close
-        this.dx = -Math.cos(angle) * this.speed;
-        this.dy = -Math.sin(angle) * this.speed;
+        this.x -= Math.cos(angle) * this.speed;
+        this.y -= Math.sin(angle) * this.speed;
+      } else if (distance > 300) {
+        // Move closer if too far
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
       }
       // Attack from any distance
       if (now - this.lastAttackTime >= this.cooldown) {
@@ -154,8 +227,8 @@ class Zombie {
       // Fighter and Tank movement
       if (distance > this.range) {
         // Move towards target
-        this.dx = Math.cos(angle) * this.speed;
-        this.dy = Math.sin(angle) * this.speed;
+        this.x += Math.cos(angle) * this.speed;
+        this.y += Math.sin(angle) * this.speed;
       }
       // Attack if in range
       if (distance <= this.range && now - this.lastAttackTime >= this.cooldown) {
@@ -163,35 +236,55 @@ class Zombie {
       }
     }
 
-    // Update position
-    this.x += this.dx;
-    this.y += this.dy;
-
     // Keep zombies within screen bounds
     this.x = Math.max(0, Math.min(window.innerWidth - this.size, this.x));
     this.y = Math.max(0, Math.min(window.innerHeight - this.size, this.y));
 
     this.element.style.left = this.x + 'px';
     this.element.style.top = this.y + 'px';
+
+    // Add AOE damage for OP fighters
+    if (this.isOP && this.type === 'fighter' && Date.now() - this.lastAoeDamageTime >= this.aoeDamageInterval) {
+      this.lastAoeDamageTime = Date.now();
+      for (let zombie of zombies) {
+        if (zombie !== this) {
+          const dx = zombie.x - this.x;
+          const dy = zombie.y - this.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < this.aoeRadius) {
+            zombie.hp -= this.aoeDamage;
+            zombie.updateHpDisplay();
+            if (zombie.hp <= 0) {
+              zombie.element.remove();
+            }
+          }
+        }
+      }
+    }
   }
 
   attack(target) {
+    if (Date.now() - this.lastAttackTime < this.cooldown) return;
     this.lastAttackTime = Date.now();
 
     if (this.type === 'archer') {
-      const projectile = new Projectile(this.x, this.y, target.x, target.y, this.damage, this);
+      const projectile = new Projectile(
+        this.x + this.size / 2,
+        this.y + this.size / 2,
+        target.x + target.size / 2,
+        target.y + target.size / 2,
+        this.damage,
+        this
+      );
       projectiles.push(projectile);
     } else {
-      // Set this zombie as the last attacker
-      target.lastAttacker = this;
-
+      // Melee attack
       target.hp -= this.damage;
-      target.element.textContent = target.hp;
+      target.updateHpDisplay();
 
-      // Check if target died and was crowned
       if (target.hp <= 0) {
-        if (target.isCrowned) {
-          this.crown(); // Transfer crown to killer
+        if (target.isCrowned && this) {
+          this.crown();
         }
         target.element.remove();
       }
@@ -252,65 +345,6 @@ class Zombie {
     return bestDirection;
   }
 
-  crown() {
-    if (!this.isCrowned) {
-      this.isCrowned = true;
-
-      // Increase max HP and current HP by 100
-      this.maxHp += 100;
-      this.hp += 100;
-
-      // Increase damage by 20%
-      this.damage = Math.floor(this.originalDamage * 1.2);
-
-      // Update HP display
-      this.element.textContent = this.hp;
-
-      // Add crown visual and crowned class
-      this.element.classList.add('crowned');
-      const crown = document.createElement('div');
-      crown.className = 'crown';
-      crown.innerHTML = '👑';
-      this.element.appendChild(crown);
-
-      // Add crown get effect
-      this.crownGetEffect();
-
-      // Start health regeneration
-      this.startRegeneration();
-    }
-  }
-
-  crownGetEffect() {
-    // Create a burst effect when getting crown
-    const burst = document.createElement('div');
-    burst.className = 'crown-burst';
-    this.element.appendChild(burst);
-
-    // Remove burst effect after animation
-    setTimeout(() => burst.remove(), 1000);
-  }
-
-  startRegeneration() {
-    const regenInterval = setInterval(() => {
-      if (this.element.isConnected && this.isCrowned && this.hp < this.maxHp) {
-        // Regenerate flat 10 HP instead of percentage
-        this.hp = Math.min(this.maxHp, this.hp + this.regenAmount);
-        this.element.textContent = this.hp;
-
-        // Re-add the crown after updating text content
-        if (this.isCrowned) {
-          const crown = document.createElement('div');
-          crown.className = 'crown';
-          crown.innerHTML = '👑';
-          this.element.appendChild(crown);
-        }
-      } else if (!this.element.isConnected) {
-        clearInterval(regenInterval);
-      }
-    }, 1000);
-  }
-
   handleProjectileHit(projectile, zombie) {
     zombie.lastAttacker = projectile.sourceZombie;
     zombie.hp -= projectile.damage;
@@ -323,6 +357,39 @@ class Zombie {
       zombie.element.remove();
     }
     return true;
+  }
+
+  findTarget() {
+    let nearestTarget = null;
+    let nearestDistance = Infinity;
+
+    for (let other of zombies) {
+      if (other === this) continue;
+
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // 60% chance targeting logic - removed type restrictions
+      if (Math.random() < 0.6) {
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestTarget = other;
+        }
+      }
+
+      // If no preferred target found, target nearest
+      if (!nearestTarget && distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestTarget = other;
+      }
+    }
+
+    return nearestTarget;
+  }
+
+  updateHpDisplay() {
+    this.hpDisplay.textContent = this.hp;
   }
 }
 
@@ -360,10 +427,11 @@ function animate() {
       const dy = zombie.y + (zombie.size / 2) - p.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < zombie.size / 2) {
+      // Use a slightly larger hit area for bigger projectiles
+      if (distance < (zombie.size / 2) + 10) {
         zombie.lastAttacker = p.sourceZombie;
         zombie.hp -= p.damage;
-        zombie.element.textContent = zombie.hp;
+        zombie.updateHpDisplay();
 
         if (zombie.hp <= 0) {
           if (zombie.isCrowned && p.sourceZombie) {
