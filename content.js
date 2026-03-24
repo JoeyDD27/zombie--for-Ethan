@@ -129,8 +129,11 @@ class Zombie {
   showMenu(x, y) {
     // Hide all other menus first
     document.querySelectorAll('.zombie-menu.visible').forEach(m => m.classList.remove('visible'));
-    this.menu.style.left = x + 'px';
-    this.menu.style.top = y + 'px';
+    // Position above the zombie, centered
+    const cx = this.x + this.size / 2;
+    const menuTop = this.y - 75; // Well above the zombie
+    this.menu.style.left = (cx - 40) + 'px';
+    this.menu.style.top = Math.max(5, menuTop) + 'px';
     this.menu.classList.add('visible');
   }
 
