@@ -93,17 +93,21 @@ class Zombie {
     const opOption = document.createElement('div');
     opOption.className = 'menu-option OP';
     opOption.textContent = 'OP';
-    opOption.addEventListener('click', (e) => {
+    opOption.addEventListener('mousedown', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       this.makeOP();
+      this.hideMenu();
     });
 
     const crownOption = document.createElement('div');
     crownOption.className = 'menu-option crown';
     crownOption.textContent = 'Crown';
-    crownOption.addEventListener('click', (e) => {
+    crownOption.addEventListener('mousedown', (e) => {
       e.stopPropagation();
+      e.preventDefault();
       this.crown();
+      this.hideMenu();
     });
 
     this.menu.appendChild(opOption);
