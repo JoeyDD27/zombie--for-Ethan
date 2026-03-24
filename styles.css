@@ -198,3 +198,108 @@
     transform: scale(1);
   }
 }
+
+/* OP mode glow */
+.zombie.OP {
+  box-shadow: 0 0 20px 8px rgba(128, 0, 128, 0.7);
+  border-color: #800080 !important;
+}
+
+/* Click menu */
+.zombie-menu {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 8px;
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 2147483647;
+  pointer-events: auto;
+  transform: translate(-50%, -120%);
+}
+
+.zombie-menu.visible {
+  display: flex;
+}
+
+.menu-option {
+  padding: 8px 12px;
+  background: #333;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: center;
+  font-weight: bold;
+  font-size: 13px;
+  user-select: none;
+}
+
+.menu-option:hover {
+  background: #555;
+}
+
+.menu-option.OP {
+  background: #6a0dad;
+}
+
+.menu-option.OP:hover {
+  background: #8b2fc9;
+}
+
+.menu-option.crown {
+  background: #daa520;
+  color: #000;
+}
+
+.menu-option.crown:hover {
+  background: #ffd700;
+}
+
+/* Control panel */
+.zombie-control-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  z-index: 2147483647;
+}
+
+.spawn-button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+}
+
+.spawn-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+}
+
+.spawn-button.archer {
+  background-color: #4CAF50;
+}
+
+.spawn-button.fighter {
+  background-color: #F44336;
+}
+
+.spawn-button.tank {
+  background-color: #2196F3;
+}
+
+.spawn-button.clear {
+  background-color: #9C27B0;
+}

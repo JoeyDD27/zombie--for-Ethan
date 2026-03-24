@@ -79,17 +79,77 @@ class Zombie {
     document.body.appendChild(this.element);
 
     this.isCrowned = false;
+    this.isOP = false;
     this.maxHp = this.hp;
     this.originalDamage = this.damage;
     this.lastAttacker = null;
     this.regenAmount = 10; // Flat regeneration amount
     this.lastDamagedTime = 0; // Track when last took damage for passive healing
 
-    // Add click listener for crowning
-    this.element.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent event bubbling
+    // Create click menu (OP + Crown)
+    this.menu = document.createElement('div');
+    this.menu.className = 'zombie-menu';
+
+    const opOption = document.createElement('div');
+    opOption.className = 'menu-option OP';
+    opOption.textContent = 'OP';
+    opOption.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.makeOP();
+    });
+
+    const crownOption = document.createElement('div');
+    crownOption.className = 'menu-option crown';
+    crownOption.textContent = 'Crown';
+    crownOption.addEventListener('click', (e) => {
+      e.stopPropagation();
       this.crown();
     });
+
+    this.menu.appendChild(opOption);
+    this.menu.appendChild(crownOption);
+    document.body.appendChild(this.menu);
+
+    // Add click listener for menu
+    this.element.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showMenu(e.clientX, e.clientY);
+    });
+
+    // Hide menu when clicking elsewhere
+    document.addEventListener('click', (e) => {
+      if (!this.menu.contains(e.target)) {
+        this.hideMenu();
+      }
+    });
+  }
+
+  showMenu(x, y) {
+    // Hide all other menus first
+    document.querySelectorAll('.zombie-menu.visible').forEach(m => m.classList.remove('visible'));
+    this.menu.style.left = x + 'px';
+    this.menu.style.top = y + 'px';
+    this.menu.classList.add('visible');
+  }
+
+  hideMenu() {
+    this.menu.classList.remove('visible');
+  }
+
+  makeOP() {
+    if (this.isOP) return;
+    this.isOP = true;
+    this.element.classList.add('OP');
+
+    // Massive stat boost
+    this.hp += 500;
+    this.maxHp += 500;
+    this.damage = Math.floor(this.damage * 2.5);
+    this.speed += 2;
+    this.cooldown = Math.floor(this.cooldown * 0.5);
+
+    this.hpDisplay.textContent = this.hp;
+    this.hideMenu();
   }
 
   findTarget() {
@@ -501,23 +561,72 @@ let projectiles = [];
 
 function killZombie(zombie) {
   zombie.element.remove();
+  if (zombie.menu && zombie.menu.isConnected) zombie.menu.remove();
   const idx = zombies.indexOf(zombie);
   if (idx !== -1) zombies.splice(idx, 1);
 }
 
+// === Control Panel ===
+function createZombieControlPanel() {
+  const existingPanel = document.querySelector('.zombie-control-panel');
+  if (existingPanel) return; // Already exists
+
+  const panel = document.createElement('div');
+  panel.className = 'zombie-control-panel';
+
+  const types = [
+    { type: 'archer', label: 'Spawn Archer' },
+    { type: 'fighter', label: 'Spawn Fighter' },
+    { type: 'tank', label: 'Spawn Tank' }
+  ];
+
+  types.forEach(({ type, label }) => {
+    const btn = document.createElement('button');
+    btn.className = 'spawn-button ' + type;
+    btn.textContent = label;
+    btn.addEventListener('click', () => spawnSpecificZombie(type));
+    panel.appendChild(btn);
+  });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'spawn-button clear';
+  clearBtn.textContent = 'Clear All';
+  clearBtn.addEventListener('click', clearAllZombies);
+  panel.appendChild(clearBtn);
+
+  document.body.appendChild(panel);
+}
+
+function spawnSpecificZombie(type) {
+  const zombie = new Zombie(type);
+  zombies = zombies.filter(z => z.element.isConnected);
+  zombies.push(zombie);
+}
+
+function clearAllZombies() {
+  zombies.forEach(z => {
+    if (z.element && z.element.isConnected) z.element.remove();
+    if (z.menu && z.menu.isConnected) z.menu.remove();
+  });
+  projectiles.forEach(p => {
+    if (p.element && p.element.isConnected) p.element.remove();
+  });
+  zombies = [];
+  projectiles = [];
+}
+
 // Message listener for spawning zombies
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Message received:", message); // Debug log
+  console.log("Message received:", message);
   if (message.action === "spawn_zombie") {
-    console.log("Spawning zombie..."); // Debug log
     const types = ['archer', 'fighter', 'tank'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     const zombie = new Zombie(randomType);
     zombies = zombies.filter(z => z.element.isConnected);
     zombies.push(zombie);
-    console.log("Zombie spawned:", randomType); // Debug log
+    createZombieControlPanel();
   }
-  return true; // Important: indicates we will respond asynchronously
+  return true;
 });
 
 // Animation loop
