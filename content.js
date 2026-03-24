@@ -525,7 +525,7 @@ class Zombie {
       // Add crown visual and crowned class
       this.element.classList.add('crowned');
       const crown = document.createElement('div');
-      crown.className = 'crown';
+      crown.className = 'crown-emoji';
       crown.innerHTML = '👑';
       this.element.appendChild(crown);
 
