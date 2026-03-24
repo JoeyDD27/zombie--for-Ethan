@@ -1,3 +1,8 @@
+if (window._zombieGameLoaded) {
+  // Already loaded — just spawn a zombie and show panel
+  console.log("Zombie script already loaded, skipping re-init");
+} else {
+window._zombieGameLoaded = true;
 console.log("Content script loaded!");
 
 class Projectile {
@@ -118,13 +123,6 @@ class Zombie {
     this.element.addEventListener('click', (e) => {
       e.stopPropagation();
       this.showMenu(e.clientX, e.clientY);
-    });
-
-    // Hide menu when clicking elsewhere
-    document.addEventListener('click', (e) => {
-      if (!this.menu.contains(e.target)) {
-        this.hideMenu();
-      }
     });
   }
 
@@ -563,6 +561,13 @@ class Zombie {
 let zombies = [];
 let projectiles = [];
 
+// Single global click handler to hide all menus
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.zombie-menu') && !e.target.closest('.zombie')) {
+    document.querySelectorAll('.zombie-menu.visible').forEach(m => m.classList.remove('visible'));
+  }
+});
+
 function killZombie(zombie) {
   zombie.element.remove();
   if (zombie.menu && zombie.menu.isConnected) zombie.menu.remove();
@@ -686,4 +691,5 @@ function animate() {
 
 animate();
 
-console.log("Content script initialization complete!"); 
+console.log("Content script initialization complete!");
+} // end of window._zombieGameLoaded guard

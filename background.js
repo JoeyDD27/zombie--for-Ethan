@@ -3,13 +3,17 @@ chrome.action.onClicked.addListener(async (tab) => {
     try {
       await chrome.tabs.sendMessage(tab.id, { action: "spawn_zombie" });
     } catch (error) {
-      // If the content script isn't ready yet, inject it
+      // Content script not loaded yet — inject CSS + JS
+      await chrome.scripting.insertCSS({
+        target: { tabId: tab.id },
+        files: ['styles.css']
+      });
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: ['content.js']
       });
-      // Try sending the message again
+      // Now send the message
       await chrome.tabs.sendMessage(tab.id, { action: "spawn_zombie" });
     }
   }
-}); 
+});
