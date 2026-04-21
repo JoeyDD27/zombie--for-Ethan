@@ -302,3 +302,29 @@
 .spawn-button.clear {
   background-color: #9C27B0;
 }
+
+.spawn-button.play {
+  background-color: #FF9800;
+}
+
+.spawn-button.exit {
+  background-color: #607D8B;
+}
+
+.zombie.player {
+  outline: 3px dashed cyan;
+  outline-offset: 2px;
+}
+
+.player-marker {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: bold;
+  color: cyan;
+  text-shadow: 0 0 3px black, 0 0 3px black;
+  pointer-events: none;
+  white-space: nowrap;
+}

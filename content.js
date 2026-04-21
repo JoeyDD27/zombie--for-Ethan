@@ -48,9 +48,9 @@ class Zombie {
       case 'fighter':
         this.hp = 75;
         this.damage = 25;
-        this.speed = 4;
+        this.speed = 2;
         this.cooldown = 700;
-        this.range = 150;
+        this.range = 100;
         break;
       case 'tank':
         this.hp = 350;
@@ -232,6 +232,10 @@ class Zombie {
   }
 
   move() {
+    if (this.isPlayer) {
+      this.playerMove();
+      return;
+    }
     const target = this.findTarget();
     const now = Date.now();
 
@@ -399,6 +403,82 @@ class Zombie {
     this.element.style.top = this.y + 'px';
   }
 
+  playerMove() {
+    const now = Date.now();
+    const keys = window._playerKeys || {};
+    let vx = 0, vy = 0;
+    if (keys['w'] || keys['arrowup']) vy -= 1;
+    if (keys['s'] || keys['arrowdown']) vy += 1;
+    if (keys['a'] || keys['arrowleft']) vx -= 1;
+    if (keys['d'] || keys['arrowright']) vx += 1;
+    const len = Math.sqrt(vx * vx + vy * vy);
+    if (len > 0) {
+      vx /= len; vy /= len;
+    }
+    this.x += vx * this.speed;
+    this.y += vy * this.speed;
+    this.x = Math.max(0, Math.min(window.innerWidth - this.size, this.x));
+    this.y = Math.max(0, Math.min(window.innerHeight - this.size, this.y));
+    this.element.style.left = this.x + 'px';
+    this.element.style.top = this.y + 'px';
+
+    // Passive healing
+    if (now - this.lastDamagedTime > 3000 && this.hp < this.maxHp) {
+      if (!this._lastHealTick || now - this._lastHealTick > 500) {
+        this.hp = Math.min(this.maxHp, this.hp + Math.ceil(this.maxHp * 0.03));
+        this.hpDisplay.textContent = this.hp;
+        this._lastHealTick = now;
+      }
+    }
+
+    // Attack: archer aims at mouse, melee picks nearest in range
+    const attackPressed = keys[' '] || window._playerMouseDown;
+    if (attackPressed && now - this.lastAttackTime >= this.cooldown) {
+      const myCx = this.x + this.size / 2;
+      const myCy = this.y + this.size / 2;
+
+      const mx = window._playerMouseX ?? myCx + 100;
+      const my = window._playerMouseY ?? myCy;
+
+      if (this.type === 'archer') {
+        this.lastAttackTime = now;
+        const projectile = new Projectile(myCx, myCy, mx, my, this.damage, this);
+        projectiles.push(projectile);
+      } else {
+        // Melee: pick in-range zombie closest to mouse-aim direction (within 60° cone)
+        const aimAngle = Math.atan2(my - myCy, mx - myCx);
+        let best = null, bestAngleDiff = Math.PI / 3;
+        for (let other of zombies) {
+          if (other === this || !other.element.isConnected) continue;
+          const dx = (other.x + other.size / 2) - myCx;
+          const dy = (other.y + other.size / 2) - myCy;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d > this.range) continue;
+          const a = Math.atan2(dy, dx);
+          let diff = Math.abs(a - aimAngle);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          if (diff < bestAngleDiff) {
+            bestAngleDiff = diff;
+            best = other;
+          }
+        }
+        if (best) {
+          this.attack(best);
+        } else {
+          // Swing/punch in mouse direction even if no hit
+          this.lastAttackTime = now;
+          const fakeTarget = {
+            x: myCx + Math.cos(aimAngle) * this.range - this.size / 2,
+            y: myCy + Math.sin(aimAngle) * this.range - this.size / 2,
+            size: this.size,
+          };
+          if (this.type === 'fighter') this.spawnSwordSwipe(fakeTarget);
+          else if (this.type === 'tank') this.spawnFistPunch(fakeTarget);
+        }
+      }
+    }
+  }
+
   attack(target) {
     this.lastAttackTime = Date.now();
 
@@ -435,9 +515,9 @@ class Zombie {
         if (target.isCrowned) {
           this.crown(); // Transfer crown to killer
         }
-        // Fighter heals 40 HP on kill (can exceed max HP)
+        // Fighter heals 15 HP on kill, capped at max HP (nerfed)
         if (this.type === 'fighter') {
-          this.hp += 40;
+          this.hp = Math.min(this.maxHp, this.hp + 15);
           this.hpDisplay.textContent = this.hp;
         }
         killZombie(target);
@@ -448,8 +528,8 @@ class Zombie {
   spawnSwordSwipe(target) {
     const swipe = document.createElement('div');
     swipe.className = 'sword-swipe';
-    // Scale sword length to match attack range
-    const swordLen = this.range - this.size / 2;
+    // Sword length = full range from fighter's center
+    const swordLen = this.range;
     // Anchor at the fighter's center
     const cx = this.x + this.size / 2;
     const cy = this.y + this.size / 2;
@@ -600,6 +680,19 @@ function createZombieControlPanel() {
     panel.appendChild(btn);
   });
 
+  const playBtn = document.createElement('button');
+  playBtn.className = 'spawn-button play';
+  playBtn.textContent = 'Play as Random';
+  playBtn.title = 'WASD to move, Space/Click to attack';
+  playBtn.addEventListener('click', spawnPlayerZombie);
+  panel.appendChild(playBtn);
+
+  const exitBtn = document.createElement('button');
+  exitBtn.className = 'spawn-button exit';
+  exitBtn.textContent = 'Exit Play';
+  exitBtn.addEventListener('click', exitPlayerZombie);
+  panel.appendChild(exitBtn);
+
   const clearBtn = document.createElement('button');
   clearBtn.className = 'spawn-button clear';
   clearBtn.textContent = 'Clear All';
@@ -613,6 +706,72 @@ function spawnSpecificZombie(type) {
   const zombie = new Zombie(type);
   zombies = zombies.filter(z => z.element.isConnected);
   zombies.push(zombie);
+}
+
+function spawnPlayerZombie() {
+  // Remove existing player if any
+  const existing = zombies.find(z => z.isPlayer);
+  if (existing) killZombie(existing);
+  const types = ['archer', 'fighter', 'tank'];
+  const randomType = types[Math.floor(Math.random() * types.length)];
+  const zombie = new Zombie(randomType);
+  zombie.isPlayer = true;
+  zombie.element.classList.add('player');
+  // Player marker
+  const marker = document.createElement('div');
+  marker.className = 'player-marker';
+  marker.textContent = 'YOU';
+  zombie.element.appendChild(marker);
+  zombies = zombies.filter(z => z.element.isConnected);
+  zombies.push(zombie);
+}
+
+function exitPlayerZombie() {
+  const existing = zombies.find(z => z.isPlayer);
+  if (existing) killZombie(existing);
+}
+
+// Global key tracker for player
+if (!window._playerKeysInstalled) {
+  window._playerKeysInstalled = true;
+  window._playerKeys = {};
+  window.addEventListener('keydown', (e) => {
+    window._playerKeys[e.key.toLowerCase()] = true;
+    if ([' ', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
+      if (zombies.some(z => z.isPlayer)) e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    window._playerKeys[e.key.toLowerCase()] = false;
+  });
+  window.addEventListener('mousemove', (e) => {
+    window._playerMouseX = e.clientX;
+    window._playerMouseY = e.clientY;
+  });
+
+  const isGameUI = (t) =>
+    t && (t.closest && (t.closest('.zombie') || t.closest('.zombie-menu') || t.closest('.zombie-control-panel')));
+  const playerActive = () => zombies.some(z => z.isPlayer);
+
+  // Capture-phase swallow: block all page mouse events while playing,
+  // except on game UI (buttons/menus/zombies).
+  const swallow = (e) => {
+    if (!playerActive()) return;
+    if (isGameUI(e.target)) return;
+    e.stopPropagation();
+    e.preventDefault();
+  };
+  ['mousedown', 'mouseup', 'click', 'dblclick', 'contextmenu', 'auxclick'].forEach(ev => {
+    window.addEventListener(ev, swallow, true);
+  });
+
+  window.addEventListener('mousedown', (e) => {
+    if (isGameUI(e.target)) return;
+    window._playerMouseDown = true;
+  }, true);
+  window.addEventListener('mouseup', () => {
+    window._playerMouseDown = false;
+  }, true);
 }
 
 function clearAllZombies() {
@@ -637,8 +796,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     zombies = zombies.filter(z => z.element.isConnected);
     zombies.push(zombie);
     createZombieControlPanel();
+    sendResponse({ ok: true });
   }
-  return true;
+  return false;
 });
 
 // Animation loop
